@@ -50,7 +50,7 @@ class BayesianOptimizer:
         lhs_unit = sampler.random(n=n_init)
         self._X_init = self._denormalize(lhs_unit)
 
-        # GP kernel with wider bounds for stability
+        # GP kernel: ConstantKernel * Matern(nu=2.5) + WhiteKernel
         kernel = (
             ConstantKernel(1.0, constant_value_bounds=(1e-6, 1e6))
             * Matern(length_scale=[1.0]*self.dim,
@@ -100,7 +100,10 @@ class BayesianOptimizer:
         """Return the next point to evaluate.
 
         During the initial phase returns LHS design points.
-        Afterwards maximises Expected Improvement.
+        1. Initial phase: LHS design points for broad space coverage.
+        2. Optimisation phase: maximise Expected Improvement to balance
+           exploitation (sampling near known good points) and exploration
+           (sampling uncertain regions).
         """
         if self._initial_phase:
             x = self._X_init[self._init_counter]
@@ -120,7 +123,7 @@ class BayesianOptimizer:
             X_arr = np.array(self.X_obs)
             y_arr = np.array(self.y_obs).reshape(-1, 1)
 
-            # Normalise inputs to [0, 1]^d and outputs to zero-mean unit-var
+            # Normalise inputs to [0, 1]^d and outputs to zero-mean unit-variance
             X_norm = self._normalize(X_arr)
             y_norm = self._y_scaler.fit_transform(y_arr).ravel()
 
@@ -176,6 +179,7 @@ class BayesianOptimizer:
         if sigma < 1e-12:
             return 0.0
 
+        # EI(x) = improvement*Phi(Z) + sigma*phi(Z),  Z = improvement/sigma
         Z = improvement / sigma
         ei_value = improvement * norm.cdf(Z) + sigma * norm.pdf(Z)
         return float(max(ei_value, 0.0))
@@ -185,7 +189,7 @@ class BayesianOptimizer:
         return -self._ei(x_norm)
 
     def _optimize_ei(self, n_restarts: int = 50) -> np.ndarray:
-        """Maximise EI in normalised [0,1]^d space via multi-start L-BFGS-B."""
+        """Maximise EI in normalised [0,1]^d space via multi-start L-BFGS-B. EI is multimodal, so multiple random starts help avoid local maxima."""
         best_x_norm = None
         best_ei = -np.inf
 
@@ -210,7 +214,7 @@ class BayesianOptimizer:
         if best_x_norm is None:
             best_x_norm = self.rng.uniform(0.0, 1.0, self.dim)
 
-        # Avoid suggesting points too close to existing observations
+        # Avoid suggesting points too close to existing observations -- a GP with zero
         x_real = self._denormalize(best_x_norm)
         if len(self.X_obs) > 0:
             X_arr = np.array(self.X_obs)

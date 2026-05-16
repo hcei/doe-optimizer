@@ -75,6 +75,7 @@ def run_simulation(args: argparse.Namespace) -> None:
         optimizer.update(x_next, y)
 
         if not args.quiet:
+            # LHS = Latin Hypercube Sampling (exploration), EI = Expected Improvement (optimisation)
             phase = 'LHS' if optimizer.is_initial_phase else 'EI '
             parts = ', '.join(
                 f'{name}={params[name]:.2f}' for name in process.FACTOR_NAMES
@@ -102,7 +103,7 @@ def run_simulation(args: argparse.Namespace) -> None:
         val = best_params[name]
         true_val = true_params[name]
         print(f'    {name:>12s}: {val:8.3f}  '
-              f'(true: {true_val:8.3f},  range: {lo}ÿ{hi})')
+              f'(true: {true_val:8.3f},  range: {lo}-{hi})')
 
     # Export if requested
     if args.output:

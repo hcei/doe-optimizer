@@ -53,6 +53,7 @@ class ChemicalProcess:
     def _solve_optimum(self) -> np.ndarray:
         """Solve H·x = -β for the stationary point in coded space."""
         b = -self._BETA_LINEAR
+        # The stationary point is found by solving d(y)/dx = 0 => H*x = -beta
         x_opt = np.linalg.solve(self._HESSIAN, b)
         return x_opt
 
@@ -104,18 +105,21 @@ class ChemicalProcess:
     # ------------------------------------------------------------------
 
     def _response(self, x: np.ndarray) -> float:
+        # y = beta_0 + beta^T*x + 0.5*x^T*H*x  (second-order response surface)
         """Noiseless response surface in coded space."""
         linear = np.dot(self._BETA_LINEAR, x)
         quadratic = 0.5 * np.dot(x, np.dot(self._HESSIAN, x))
         return self._INTERCEPT + linear + quadratic
 
     def _to_coded(self, name: str, value: float) -> float:
+        # Maps real-world value to [-1, 1] coded space: x_coded = (value - midpoint) / half_range
         lo, hi = self.FACTOR_BOUNDS[name]
         mid = (lo + hi) / 2.0
         half_range = (hi - lo) / 2.0
         return (value - mid) / half_range
 
     def _to_real(self, name: str, coded: float) -> float:
+        # Maps coded [-1, 1] back to real-world value: value = coded * half_range + midpoint
         lo, hi = self.FACTOR_BOUNDS[name]
         mid = (lo + hi) / 2.0
         half_range = (hi - lo) / 2.0
@@ -133,7 +137,7 @@ if __name__ == '__main__':
     print('True optimum (noiseless):')
     for k, v in opt_params.items():
         lo, hi = proc.FACTOR_BOUNDS[k]
-        print(f'  {k:>12s}: {v:8.3f}  (range {lo}–{hi})')
+        print(f'  {k:>12s}: {v:8.3f}  (range {lo}-{hi})')
     print(f'  {"yield":>12s}: {opt_yield:8.3f} %')
 
     # Check coded-space optimum is in [-1, 1]
