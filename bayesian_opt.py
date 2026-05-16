@@ -50,7 +50,8 @@ class BayesianOptimizer:
         lhs_unit = sampler.random(n=n_init)
         self._X_init = self._denormalize(lhs_unit)
 
-        # GP kernel: ConstantKernel * Matern(nu=2.5) + WhiteKernel
+        # GP 核函数：ConstantKernel * Matern(nu=2.5) + WhiteKernel
+        # ConstantKernel 控制整体方差，Matern52 产生平滑但非无限可微的样本，WhiteKernel 捕捉观测噪声
         kernel = (
             ConstantKernel(1.0, constant_value_bounds=(1e-6, 1e6))
             * Matern(length_scale=[1.0]*self.dim,
@@ -100,10 +101,9 @@ class BayesianOptimizer:
         """Return the next point to evaluate.
 
         During the initial phase returns LHS design points.
-        1. Initial phase: LHS design points for broad space coverage.
-        2. Optimisation phase: maximise Expected Improvement to balance
-           exploitation (sampling near known good points) and exploration
-           (sampling uncertain regions).
+        阶段一：使用 Latin Hypercube Sampling 在设计空间均匀撒点，获取全局信息。
+        阶段二：通过 Expected Improvement 采集函数平衡利用（已知优区采样）
+               与探索（不确定区域采样），迭代收敛到全局最优。
         """
         if self._initial_phase:
             x = self._X_init[self._init_counter]
@@ -123,7 +123,7 @@ class BayesianOptimizer:
             X_arr = np.array(self.X_obs)
             y_arr = np.array(self.y_obs).reshape(-1, 1)
 
-            # Normalise inputs to [0, 1]^d and outputs to zero-mean unit-variance
+            # 将输入归一化到 [0,1]^d，输出归一化到零均值单位方差，使 GP 超参数与观测值量纲无关
             X_norm = self._normalize(X_arr)
             y_norm = self._y_scaler.fit_transform(y_arr).ravel()
 
@@ -179,7 +179,7 @@ class BayesianOptimizer:
         if sigma < 1e-12:
             return 0.0
 
-        # EI(x) = improvement*Phi(Z) + sigma*phi(Z),  Z = improvement/sigma
+        # EI(x) = Delta_mu * Phi(Z) + sigma * phi(Z)，其中 Z = Delta_mu / sigma
         Z = improvement / sigma
         ei_value = improvement * norm.cdf(Z) + sigma * norm.pdf(Z)
         return float(max(ei_value, 0.0))
@@ -189,7 +189,7 @@ class BayesianOptimizer:
         return -self._ei(x_norm)
 
     def _optimize_ei(self, n_restarts: int = 50) -> np.ndarray:
-        """Maximise EI in normalised [0,1]^d space via multi-start L-BFGS-B. EI is multimodal, so multiple random starts help avoid local maxima."""
+        """Maximise EI in normalised [0,1]^d space via multi-start L-BFGS-B. EI 函数通常为多峰形态，单次梯度优化容易陷入局部最优，因此采用多次随机起点取最优值。"""
         best_x_norm = None
         best_ei = -np.inf
 
@@ -214,7 +214,8 @@ class BayesianOptimizer:
         if best_x_norm is None:
             best_x_norm = self.rng.uniform(0.0, 1.0, self.dim)
 
-        # Avoid suggesting points too close to existing observations -- a GP with zero
+        # 避免推荐与已有观测点距离过近的候选点——GP 在已观测点的预测方差为零，
+        # 会导致 EI 值退化为零。微扰动使优化器保持移动。
         x_real = self._denormalize(best_x_norm)
         if len(self.X_obs) > 0:
             X_arr = np.array(self.X_obs)

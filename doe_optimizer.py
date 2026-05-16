@@ -75,7 +75,7 @@ def run_simulation(args: argparse.Namespace) -> None:
         optimizer.update(x_next, y)
 
         if not args.quiet:
-            # LHS = Latin Hypercube Sampling (exploration), EI = Expected Improvement (optimisation)
+            # 阶段标签：LHS（Latin Hypercube Sampling，初始探索阶段） / EI（Expected Improvement，模型驱动优化阶段）
             phase = 'LHS' if optimizer.is_initial_phase else 'EI '
             parts = ', '.join(
                 f'{name}={params[name]:.2f}' for name in process.FACTOR_NAMES

@@ -53,7 +53,7 @@ class ChemicalProcess:
     def _solve_optimum(self) -> np.ndarray:
         """Solve H·x = -β for the stationary point in coded space."""
         b = -self._BETA_LINEAR
-        # The stationary point is found by solving d(y)/dx = 0 => H*x = -beta
+        # 解析求解：令导数 d(y)/dx = 0 得 H*x = -beta，解线性方程组得驻点（理论最优）
         x_opt = np.linalg.solve(self._HESSIAN, b)
         return x_opt
 
@@ -105,21 +105,21 @@ class ChemicalProcess:
     # ------------------------------------------------------------------
 
     def _response(self, x: np.ndarray) -> float:
-        # y = beta_0 + beta^T*x + 0.5*x^T*H*x  (second-order response surface)
+        # 二阶响应面模型：y = beta_0 + beta^T*x + 0.5*x^T*H*x（线性项 + 二次项 + 交互项）
         """Noiseless response surface in coded space."""
         linear = np.dot(self._BETA_LINEAR, x)
         quadratic = 0.5 * np.dot(x, np.dot(self._HESSIAN, x))
         return self._INTERCEPT + linear + quadratic
 
     def _to_coded(self, name: str, value: float) -> float:
-        # Maps real-world value to [-1, 1] coded space: x_coded = (value - midpoint) / half_range
+        # 将实际物理值映射到 [-1,1] 编码空间：编码值 = (实际值 - 中点) / 半宽
         lo, hi = self.FACTOR_BOUNDS[name]
         mid = (lo + hi) / 2.0
         half_range = (hi - lo) / 2.0
         return (value - mid) / half_range
 
     def _to_real(self, name: str, coded: float) -> float:
-        # Maps coded [-1, 1] back to real-world value: value = coded * half_range + midpoint
+        # 将 [-1,1] 编码值还原为实际物理值：实际值 = 编码值 * 半宽 + 中点
         lo, hi = self.FACTOR_BOUNDS[name]
         mid = (lo + hi) / 2.0
         half_range = (hi - lo) / 2.0
