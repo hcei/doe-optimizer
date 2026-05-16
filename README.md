@@ -31,14 +31,14 @@
 # 安装依赖
 pip install -r requirements.txt
 
-# 默认模拟模式（30 次实验）
+# 默认交互模式（手动输入实验结果）
 python doe_optimizer.py
 
 # 自定义参数
 python doe_optimizer.py --budget 50 --seed 123
 
-# 交互模式（手动输入实验结果）
-python doe_optimizer.py --interactive
+# 模拟模式（内置模拟器）
+python doe_optimizer.py --simulate
 
 # 导出历史到 CSV
 python doe_optimizer.py --output history.csv

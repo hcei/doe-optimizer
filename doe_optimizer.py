@@ -1,9 +1,9 @@
-﻿"""DOE Bayesian Optimisation CLI.
+"""DOE Bayesian Optimisation CLI.
 
 Usage
 -----
-    python doe_optimizer.py                          # built-in simulation
-    python doe_optimizer.py --interactive            # user-input mode
+    python doe_optimizer.py                          # interactive mode (default)
+    python doe_optimizer.py --simulate               # built-in simulation
     python doe_optimizer.py --budget 50 --seed 123   # custom settings
     python doe_optimizer.py --output history.csv     # export to CSV
 """
@@ -28,8 +28,8 @@ def parse_args() -> argparse.Namespace:
                    help='Maximum number of experiments (default: 30)')
     p.add_argument('--seed', type=int, default=42,
                    help='Random seed for reproducibility (default: 42)')
-    p.add_argument('--interactive', action='store_true',
-                   help='Interactive mode: user provides experiment results')
+    p.add_argument('--simulate', action='store_true',
+                   help='Run with built-in simulation mode')
     p.add_argument('--output', type=str, default=None,
                    help='Export optimisation history to CSV file')
     p.add_argument('--quiet', action='store_true',
@@ -102,7 +102,7 @@ def run_simulation(args: argparse.Namespace) -> None:
         val = best_params[name]
         true_val = true_params[name]
         print(f'    {name:>12s}: {val:8.3f}  '
-              f'(true: {true_val:8.3f},  range: {lo}每{hi})')
+              f'(true: {true_val:8.3f},  range: {lo}ÿ{hi})')
 
     # Export if requested
     if args.output:
@@ -193,10 +193,10 @@ def export_csv(optimizer: BayesianOptimizer,
 def main():
     args = parse_args()
 
-    if args.interactive:
-        run_interactive(args)
-    else:
+    if args.simulate:
         run_simulation(args)
+    else:
+        run_interactive(args)
 
 
 if __name__ == '__main__':
